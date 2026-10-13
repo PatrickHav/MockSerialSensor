@@ -12,6 +12,10 @@ A small mock Modbus RTU sensor for testing an IoT gateway over an RS-485 serial 
 
 The server responds to gateway requests; it does not transmit unsolicited Modbus messages.
 
+The laptop running this program acts as the Modbus slave/server. The USB-to-RS-485 adapter only converts between USB and RS-485 signaling. The IoT gateway acts as the Modbus master/client and polls the laptop for register values.
+
+The `-o`/`--output` option selects a JSONL file for recorded readings. A record is appended only when the gateway sends a Modbus request; starting the server by itself does not generate output records.
+
 ## Register Map
 
 Holding registers use zero-based Modbus addresses:
@@ -31,6 +35,34 @@ For example, a register value of `225` represents `22.5 °C`, and `500` represen
 - The gateway and mock sensor must use matching serial settings.
 
 The Python dependencies are listed in [requirements.txt](requirements.txt).
+
+## Serial Port Permissions
+
+On Linux, USB serial devices commonly belong to the `dialout` group. Check the device ownership with:
+
+```bash
+ls -l /dev/ttyUSB0
+```
+
+If the device group is `dialout`, add your user to it:
+
+```bash
+sudo usermod -aG dialout "$USER"
+```
+
+Log out and back in, or apply the group in the current shell with:
+
+```bash
+newgrp dialout
+```
+
+Then run the program normally from the activated environment:
+
+```bash
+python main.py --port /dev/ttyUSB0
+```
+
+Do not run it with `sudo`; `sudo` may use a different Python environment that does not contain the project dependencies.
 
 ## Running
 
@@ -55,6 +87,7 @@ A complete example with explicit settings:
 ```bash
 python main.py \
   --port /dev/ttyUSB0 \
+  --output sensor-readings.jsonl \
   --slave-id 1 \
   --baudrate 9600 \
   --bytesize 8 \
@@ -69,6 +102,7 @@ Press `Ctrl+C` to stop the server.
 | Option | Default | Description |
 | --- | --- | --- |
 | `--port` | `/dev/ttyUSB0` | Serial device path |
+| `-o`, `--output` | `modbus_data.jsonl` | JSONL file for recorded readings |
 | `--slave-id` | `1` | Modbus slave ID, from `1` to `247` |
 | `--baudrate` | `9600` | Serial baud rate |
 | `--bytesize` | `8` | Number of data bits: `5`, `6`, `7`, or `8` |
